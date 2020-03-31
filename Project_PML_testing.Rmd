@@ -1,0 +1,96 @@
+---
+title: "Project_Practical_Machine_Learning"
+author: "Vladislav Kaplan"
+date: "March 30, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Practical Machine Learning project
+
+Loading packages
+```{r}
+library(caret); 
+library(rattle); 
+library(rpart); 
+library(rpart.plot)
+library(randomForest); 
+```
+
+Download Data
+```{r}
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "pml-testing.csv")
+```
+
+Clean up and Training/testing set creation
+```{r}
+Tr <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+Ts <- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+Tr <- Tr[, colSums(is.na(Tr)) == 0]
+Ts <- Ts[, colSums(is.na(Ts)) == 0]
+Tr <- Tr[, -c(1:7)]
+Ts <- Ts[, -c(1:7)]
+```
+
+Validation set creation
+```{r}
+set.seed(1332) 
+inTrain <- createDataPartition(Tr$classe, p = 0.7, list = FALSE)
+train <- Tr[inTrain, ]
+valid <- Tr[-inTrain, ]
+```
+
+Control method definition
+```{r}
+control <- trainControl(method = "boot", number = 5)
+```
+
+Mass non recursive partitioning upproach
+```{r}
+Model_rpart <- train(classe ~ ., data = train, method = "rpart",trControl = control);
+print(Model_rpart,digits=3)
+fancyRpartPlot(Model_rpart$finalModel)
+```
+
+Stachastic Gradient Boosing upproach
+```{r,echo=FALSE}
+Model_StochasticGB <- train(classe ~ ., data = train, method = "gbm",trControl = control);
+print(Model_StochasticGB,digits=3)
+```
+
+Random Forest apporach
+```{r}
+Model_rf <- train(classe ~ ., data = train, method = "rf", trControl = control);
+print(Model_rf, digits = 3)
+```
+
+
+## Predictions on validation set
+
+Mass non recursive partitioning upproach
+```{r}
+predict_rpart <- predict(Model_rpart, valid)
+(conf_rpart <- confusionMatrix(valid$classe, predict_rpart))
+```
+
+Stachastic Gradient Boosing upproach
+```{r}
+predict_Model_StochasticGB <- predict(Model_StochasticGB, valid)
+(conf_Model_StochasticGB <- confusionMatrix(valid$classe, predict_Model_StochasticGB))
+```
+
+Random Forest apporach
+```{r}
+predict_rf <- predict(Model_rf, valid)
+(conf_rf <- confusionMatrix(valid$classe, predict_rf))
+```
+
+## Best predictor on Testing Set
+```{r}
+(predict(Model_rf, Ts))
+```
+
